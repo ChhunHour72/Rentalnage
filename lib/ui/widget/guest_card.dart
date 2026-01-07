@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../model/rental_model.dart';
+import '../../model/room.dart';
 
 // Widget to display guest/tenant information in a list
 class GuestCard extends StatelessWidget {
