@@ -12,10 +12,10 @@ class DashboardTab extends StatefulWidget {
   const DashboardTab({super.key});
 
   @override
-  State<DashboardTab> createState() => _DashboardTabState();
+  State<DashboardTab> createState() => DashboardTabState();
 }
 
-class _DashboardTabState extends State<DashboardTab> {
+class DashboardTabState extends State<DashboardTab> {
   List<Room> rooms = [];
   bool isLoading = true;
 

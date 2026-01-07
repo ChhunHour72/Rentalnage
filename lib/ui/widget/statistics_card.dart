@@ -38,19 +38,19 @@ class StatisticsCard extends StatelessWidget {
         ),
         child: Column(
           children: [
-            // Top row
+            // Top row - Total and Available
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
                 _buildStatItem(
                   icon: Icons.home_rounded,
-                  label: 'All Rooms',
+                  label: 'Total Rooms',
                   value: totalRooms.toString(),
                 ),
                 _buildStatItem(
-                  icon: Icons.close_rounded,
-                  label: 'Unpaid',
-                  value: unpaidRooms.toString(),
+                  icon: Icons.meeting_room_outlined,
+                  label: 'Available',
+                  value: availableRooms.toString(),
                 ),
               ],
             ),
@@ -59,58 +59,53 @@ class StatisticsCard extends StatelessWidget {
             Divider(color: Colors.white.withOpacity(0.3), thickness: 1),
             SizedBox(height: 16),
 
-            // Bottom row
+            // Bottom row - Payment statuses
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
                 _buildStatItem(
-                  icon: Icons.meeting_room_outlined,
-                  label: 'Available',
-                  value: availableRooms.toString(),
+                  icon: Icons.check_circle_rounded,
+                  label: 'Paid',
+                  value: paidRooms.toString(),
                 ),
-                
-                // Paid percentage with circular indicator
-                Container(
-                  width: 80,
-                  height: 80,
-                  child: Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      SizedBox(
-                        width: 80,
-                        height: 80,
-                        child: CircularProgressIndicator(
-                          value: totalRooms > 0 ? paidRooms / totalRooms : 0,
-                          strokeWidth: 6,
-                          backgroundColor: Colors.white.withOpacity(0.3),
-                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                        ),
-                      ),
-                      Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            '${totalRooms > 0 ? (paidRooms / totalRooms * 100).toInt() : 0}%',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 24,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          Text(
-                            'Completion',
-                            style: TextStyle(
-                              color: Colors.white.withOpacity(0.9),
-                              fontSize: 11,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
+                _buildStatItem(
+                  icon: Icons.pending_rounded,
+                  label: 'Unpaid',
+                  value: unpaidRooms.toString(),
                 ),
               ],
             ),
+            
+            if (totalRooms > 0) ...[
+              SizedBox(height: 16),
+              Divider(color: Colors.white.withOpacity(0.3), thickness: 1),
+              SizedBox(height: 12),
+              
+              // Paid percentage indicator
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.payments, color: Colors.white, size: 20),
+                  SizedBox(width: 8),
+                  Text(
+                    'Payment Rate: ${(paidRooms / totalRooms * 100).toInt()}%',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  SizedBox(width: 8),
+                  Text(
+                    '($paidRooms/$totalRooms paid)',
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(0.9),
+                      fontSize: 14,
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ],
         ),
       ),
