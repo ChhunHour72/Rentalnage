@@ -1,16 +1,19 @@
 import 'package:flutter/material.dart';
 import 'dart:convert';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../../model/room.dart';
 import '../../../data/initial_data.dart';
+import '../../widget/tenant_card.dart';
+import '../create_receipt_screen.dart';
 
-class TodayPaymentTab extends StatefulWidget {
-  const TodayPaymentTab({super.key});
+class PaymentsTab extends StatefulWidget {
+  const PaymentsTab({super.key});
 
   @override
-  State<TodayPaymentTab> createState() => _TodayPaymentTabState();
+  State<PaymentsTab> createState() => PaymentsTabState();
 }
 
-class _TodayPaymentTabState extends State<TodayPaymentTab> {
+class PaymentsTabState extends State<PaymentsTab> {
   List<Room> allRooms = [];
   List<Room> displayedRooms = [];
   bool isLoading = true;
@@ -24,19 +27,32 @@ class _TodayPaymentTabState extends State<TodayPaymentTab> {
 
   Future<void> loadData() async {
     try {
-      String jsonString = initialDataJson;
+      // Load from SharedPreferences to get latest data including evictions
+      final prefs = await SharedPreferences.getInstance();
+      String? savedData = prefs.getString('rooms_data');
+      
+      String jsonString = savedData ?? initialDataJson;
       Map<String, dynamic> jsonData = json.decode(jsonString);
       List<dynamic> roomsJson = jsonData['rooms'];
       
       List<Room> tempRooms = [];
       for (int i = 0; i < roomsJson.length; i++) {
-        tempRooms.add(Room.fromJson(roomsJson[i]));
+        Room room = Room.fromJson(roomsJson[i]);
+        // Only add rooms with tenants
+        if (room.tenant != null) {
+          tempRooms.add(room);
+        }
       }
       
       if (mounted) {
         setState(() {
           allRooms = tempRooms;
-          displayedRooms = tempRooms;
+          // Apply current filter
+          if (currentFilter == "All") {
+            displayedRooms = tempRooms;
+          } else {
+            displayedRooms = tempRooms.where((r) => r.statusColor == currentFilter).toList();
+          }
           isLoading = false;
         });
       }
@@ -57,15 +73,13 @@ class _TodayPaymentTabState extends State<TodayPaymentTab> {
     setState(() {
       currentFilter = filter;
       
+      // Filter logic: "All" shows all occupied rooms,
+      // specific filters show only rooms matching that payment status
       if (filter == "All") {
-        List<Room> filteredList = [];
-        for (int i = 0; i < allRooms.length; i++) {
-          if (allRooms[i].tenant != null) {
-            filteredList.add(allRooms[i]);
-          }
-        }
-        displayedRooms = filteredList;
+        // Show all rooms with tenants (already filtered in loadData)
+        displayedRooms = allRooms;
       } else {
+        // Filter by payment status
         List<Room> filteredList = [];
         for (int i = 0; i < allRooms.length; i++) {
           if (allRooms[i].statusColor == filter) {
@@ -118,25 +132,19 @@ class _TodayPaymentTabState extends State<TodayPaymentTab> {
                           itemCount: displayedRooms.length,
                           itemBuilder: (context, index) {
                             Room room = displayedRooms[index];
-                            String roomStatus = room.statusColor;
-                            Color statusColor = roomStatus == "Unpaid" 
-                                ? Colors.red 
-                                : Colors.purple;
                             
-                            return Card(
-                              margin: EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                              child: ListTile(
-                                leading: CircleAvatar(
-                                  backgroundColor: statusColor,
-                                  child: Text(room.roomNumber),
-                                ),
-                                title: Text(room.tenant?.name ?? 'No Tenant'),
-                                subtitle: Text('Room ${room.roomNumber}'),
-                                trailing: Chip(
-                                  label: Text(roomStatus),
-                                  backgroundColor: statusColor.withOpacity(0.2),
-                                ),
-                              ),
+                            return TenantCard(
+                              room: room,
+                              onTap: () async {
+                                await Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => CreateReceiptScreen(initialRoom: room),
+                                  ),
+                                );
+                                // Reload data after returning from create receipt screen
+                                loadData();
+                              },
                             );
                           },
                         ),

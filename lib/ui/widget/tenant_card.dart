@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../model/room.dart';
 
-// This is a reusable widget that displays room information
 class TenantCard extends StatelessWidget {
   final Room room;
   final VoidCallback onTap;
@@ -14,18 +13,11 @@ class TenantCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Get the status of the room (Empty, Paid, or Unpaid)
-    String roomStatus = room.status;
-
-    // Choose color based on status
-    Color statusColor;
-    if (roomStatus == "Empty") {
-      statusColor = Colors.grey;
-    } else if (roomStatus == "Unpaid") {
-      statusColor = Colors.red;
-    } else {
-      statusColor = Colors.green;
-    }
+    String status = room.status;
+    
+    Color statusColor = status == "Empty" ? Colors.grey
+        : status == "Unpaid" ? Colors.red
+        : Colors.green;
 
     return Card(
       margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -36,7 +28,6 @@ class TenantCard extends StatelessWidget {
           padding: EdgeInsets.all(16),
           child: Row(
             children: [
-              // Room icon
               Container(
                 width: 50,
                 height: 50,
@@ -53,12 +44,10 @@ class TenantCard extends StatelessWidget {
 
               SizedBox(width: 16),
 
-              // Room information
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Room number
                     Text(
                       'Room ${room.roomNumber}',
                       style: TextStyle(
@@ -69,7 +58,6 @@ class TenantCard extends StatelessWidget {
 
                     SizedBox(height: 4),
 
-                    // Tenant name or "No Tenant"
                     Text(
                       room.tenant != null ? room.tenant!.name : 'No Tenant',
                       style: TextStyle(
@@ -77,11 +65,22 @@ class TenantCard extends StatelessWidget {
                         color: Colors.grey.shade700,
                       ),
                     ),
+
+                    if (room.receipts.isNotEmpty) ...[
+                      SizedBox(height: 4),
+                      Text(
+                        '\$${room.receipts.last.totalCost.toStringAsFixed(2)}',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: statusColor,
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
 
-              // Status pill
               Container(
                 padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
@@ -89,7 +88,7 @@ class TenantCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
-                  roomStatus,
+                  status,
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: 12,

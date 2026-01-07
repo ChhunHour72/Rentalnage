@@ -87,6 +87,54 @@ const String initialDataJson = '''
       "roomNumber": "7",
       "tenant": null,
       "receipts": []
+    },
+    {
+      "roomNumber": "1",
+      "tenant": {
+        "name": "Michael",
+        "phone": "0856789012",
+        "joinDate": "2024-09-01"
+      },
+      "receipts": [
+        {
+          "roomCost": 100,
+          "waterCost": 10,
+          "electricityCost": 10,
+          "durDate": "2025-01-01",
+          "endDate": "2025-01-31",
+          "isPaid": true,
+          "paymentStatus": "Paid"
+        }
+      ]
+    },
+    {
+      "roomNumber": "4",
+      "tenant": {
+        "name": "Sarah",
+        "phone": "0867890123",
+        "joinDate": "2024-12-01"
+      },
+      "receipts": [
+        {
+          "roomCost": 100,
+          "waterCost": 10,
+          "electricityCost": 10,
+          "durDate": "2025-01-01",
+          "endDate": "2025-01-31",
+          "isPaid": false,
+          "paymentStatus": "Unpaid"
+        }
+      ]
+    },
+    {
+      "roomNumber": "8",
+      "tenant": null,
+      "receipts": []
+    },
+    {
+      "roomNumber": "9",
+      "tenant": null,
+      "receipts": []
     }
   ]
 }
