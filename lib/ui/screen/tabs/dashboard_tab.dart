@@ -6,6 +6,7 @@ import '../../widget/statistics_card.dart';
 import '../../widget/expense_card.dart';
 import '../../widget/guest_card.dart';
 import '../room_detail_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class DashboardTab extends StatefulWidget {
   const DashboardTab({super.key});
@@ -26,26 +27,70 @@ class _DashboardTabState extends State<DashboardTab> {
 
   Future<void> loadData() async {
     try {
-      String jsonString = initialDataJson;
-      
+      print('DashboardTab: Starting to load data...');
+
+      final prefs = await SharedPreferences.getInstance();
+      String? savedData = prefs.getString('rooms_data');
+
+      String jsonString;
+      if (savedData != null) {
+        jsonString = savedData;
+        print('DashboardTab: Loaded from SharedPreferences');
+      } else {
+        jsonString = initialDataJson;
+        await prefs.setString('rooms_data', jsonString);
+        print('DashboardTab: Initialized with default data');
+      }
+
+      print('DashboardTab: Parsing JSON...');
       Map<String, dynamic> jsonData = json.decode(jsonString);
       List<dynamic> roomsJson = jsonData['rooms'];
       List<Room> tempRooms = [];
-      
+
       for (int i = 0; i < roomsJson.length; i++) {
         Room room = Room.fromJson(roomsJson[i]);
         tempRooms.add(room);
       }
-      
-      setState(() {
-        rooms = tempRooms;
-        isLoading = false;
-      });
-    } catch (e) {
+
+      print('DashboardTab: Loaded ${tempRooms.length} rooms');
+      if (mounted) {
+        setState(() {
+          rooms = tempRooms;
+          isLoading = false;
+        });
+      }
+    } catch (e, stackTrace) {
       print('Error loading data: $e');
-      setState(() {
-        isLoading = false;
-      });
+      print('Stack trace: $stackTrace');
+      if (mounted) {
+        setState(() {
+          rooms = [];
+          isLoading = false;
+        });
+      }
+    }
+  }
+
+  Future<void> saveData() async {
+    try {
+      print('DashboardTab: Saving data...');
+
+      Map<String, dynamic> data = {
+        'rooms': rooms.map((room) => room.toJson()).toList(),
+      };
+
+      const encoder = JsonEncoder.withIndent('  ');
+      String jsonString = encoder.convert(data);
+
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('rooms_data', jsonString);
+      print('DashboardTab: Data saved to SharedPreferences');
+      print(
+        'DashboardTab: Saved data: ${jsonString.substring(0, jsonString.length > 200 ? 200 : jsonString.length)}...',
+      );
+    } catch (e, stackTrace) {
+      print('Error saving data: $e');
+      print('Stack trace: $stackTrace');
     }
   }
 
@@ -145,7 +190,11 @@ class _DashboardTabState extends State<DashboardTab> {
                           child: CircleAvatar(
                             radius: 24,
                             backgroundColor: Color(0xFFFF6B6B).withOpacity(0.1),
-                            child: Icon(Icons.person, color: Color(0xFFFF6B6B), size: 26),
+                            child: Icon(
+                              Icons.person,
+                              color: Color(0xFFFF6B6B),
+                              size: 26,
+                            ),
                           ),
                         ),
                         SizedBox(width: 14),
@@ -260,32 +309,49 @@ class _DashboardTabState extends State<DashboardTab> {
                   SizedBox(height: 14),
 
                   // Guest list
-                  ListView.builder(
-                    shrinkWrap: true,
-                    physics: NeverScrollableScrollPhysics(),
-                    itemCount: rooms.length,
-                    itemBuilder: (context, index) {
-                      Room currentRoom = rooms[index];
-                      
-                      return GuestCard(
-                        room: currentRoom,
-                        onTap: () {
-                          // Navigate to detail screen
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => RoomDetailScreen(
-                                room: currentRoom,
-                                onUpdate: () {
-                                  loadData();
-                                },
+                  rooms.isEmpty
+                      ? Padding(
+                          padding: EdgeInsets.all(20),
+                          child: Center(
+                            child: Text(
+                              'No rooms data available',
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: Colors.grey,
                               ),
                             ),
-                          );
-                        },
-                      );
-                    },
-                  ),
+                          ),
+                        )
+                      : ListView.builder(
+                          shrinkWrap: true,
+                          physics: NeverScrollableScrollPhysics(),
+                          itemCount: rooms.length,
+                          itemBuilder: (context, index) {
+                            Room currentRoom = rooms[index];
+
+                            return GuestCard(
+                              room: currentRoom,
+                              onTap: () async {
+                                // Navigate to detail screen
+                                await Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => RoomDetailScreen(
+                                      room: currentRoom,
+                                      allRooms: rooms,
+                                      onUpdate: () {
+                                        saveData();
+                                        setState(() {});
+                                      },
+                                    ),
+                                  ),
+                                );
+                                // Reload data when coming back to ensure sync
+                                loadData();
+                              },
+                            );
+                          },
+                        ),
 
                   SizedBox(height: 100),
                 ],
