@@ -36,27 +36,174 @@ class _RoomDetailScreenState extends State<RoomDetailScreen> {
   }
 
   void showAddTenantDialog() {
+    final roomCostController = TextEditingController(text: '100');
+    final waterCostController = TextEditingController(text: '10');
+    final electricCostController = TextEditingController(text: '10');
+    DateTime selectedJoinDate = DateTime.now();
+    String formattedJoinDate = "${selectedJoinDate.day.toString().padLeft(2, '0')} ${_getMonthName(selectedJoinDate.month)}, ${selectedJoinDate.year}";
+    
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: Text('Add Tenant'),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    CustomTextField(
+                      controller: nameController,
+                      labelText: 'Tenant Name',
+                      icon: Icons.person,
+                    ),
+                    SizedBox(height: 16),
+                    CustomTextField(
+                      controller: phoneController,
+                      labelText: 'Phone Number',
+                      icon: Icons.phone,
+                      keyboardType: TextInputType.phone,
+                    ),
+                    SizedBox(height: 16),
+                    InkWell(
+                      onTap: () async {
+                        final DateTime? picked = await showDatePicker(
+                          context: context,
+                          initialDate: selectedJoinDate,
+                          firstDate: DateTime(2020),
+                          lastDate: DateTime(2030),
+                        );
+                        if (picked != null) {
+                          setDialogState(() {
+                            selectedJoinDate = picked;
+                            formattedJoinDate = "${picked.day.toString().padLeft(2, '0')} ${_getMonthName(picked.month)}, ${picked.year}";
+                          });
+                        }
+                      },
+                      child: InputDecorator(
+                        decoration: InputDecoration(
+                          labelText: 'Join Date',
+                          border: OutlineInputBorder(),
+                          prefixIcon: Icon(Icons.calendar_today),
+                        ),
+                        child: Text(formattedJoinDate),
+                      ),
+                    ),
+                    SizedBox(height: 16),
+                    Text(
+                      'Initial Payment Details',
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                    ),
+                    SizedBox(height: 12),
+                    CustomTextField(
+                      controller: roomCostController,
+                      labelText: 'Room Cost',
+                      icon: Icons.home,
+                      keyboardType: TextInputType.number,
+                    ),
+                    SizedBox(height: 12),
+                    CustomTextField(
+                      controller: waterCostController,
+                      labelText: 'Water Cost',
+                      icon: Icons.water_drop,
+                      keyboardType: TextInputType.number,
+                    ),
+                    SizedBox(height: 12),
+                    CustomTextField(
+                      controller: electricCostController,
+                      labelText: 'Electricity Cost',
+                      icon: Icons.electric_bolt,
+                      keyboardType: TextInputType.number,
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: Text('Cancel'),
+                ),
+                ElevatedButton(
+                  onPressed: () async {
+                    if (nameController.text.isNotEmpty &&
+                        phoneController.text.isNotEmpty) {
+                      // Calculate end date (30 days from join date)
+                      DateTime endDateTime = selectedJoinDate.add(Duration(days: 30));
+                      String formattedEndDate = "${endDateTime.day.toString().padLeft(2, '0')} ${_getMonthName(endDateTime.month)}, ${endDateTime.year}";
+                      
+                      setState(() {
+                        widget.room.tenant = Tenant(
+                          name: nameController.text,
+                          phone: phoneController.text,
+                          joinDate: selectedJoinDate.toString().split(' ')[0],
+                        );
+                        
+                        // Automatically create the first month's receipt when assigning a new tenant
+                        // This ensures every tenant has an initial payment record from day one
+                        widget.room.receipts.add(
+                          Receipt(
+                            roomCost: double.tryParse(roomCostController.text) ?? 100,
+                            waterCost: double.tryParse(waterCostController.text) ?? 10,
+                            electricityCost: double.tryParse(electricCostController.text) ?? 10,
+                            durDate: formattedJoinDate,
+                            endDate: formattedEndDate,
+                            isPaid: false,
+                            paymentStatus: 'Unpaid',
+                          ),
+                        );
+                      });
+                  
+                      if (widget.allRooms != null) {
+                        try {
+                          Map<String, dynamic> data = {
+                            'rooms': widget.allRooms!.map((room) => room.toJson()).toList(),
+                          };
+                          String jsonString = json.encode(data);
+                          final prefs = await SharedPreferences.getInstance();
+                          await prefs.setString('rooms_data', jsonString);
+                        } catch (e) {
+                          // Handle save error silently
+                        }
+                      }
+                      
+                      widget.onUpdate();
+                      nameController.clear();
+                      phoneController.clear();
+                      roomCostController.dispose();
+                      waterCostController.dispose();
+                      electricCostController.dispose();
+                      Navigator.pop(context);
+                      
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Tenant added successfully with initial receipt'),
+                            backgroundColor: Colors.green,
+                          ),
+                        );
+                      }
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(backgroundColor: Colors.blue),
+                  child: Text('Add Tenant'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void evictTenant() {
     showDialog(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: Text('Add Tenant'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              CustomTextField(
-                controller: nameController,
-                labelText: 'Tenant Name',
-                icon: Icons.person,
-              ),
-              SizedBox(height: 16),
-              CustomTextField(
-                controller: phoneController,
-                labelText: 'Phone Number',
-                icon: Icons.phone,
-                keyboardType: TextInputType.phone,
-              ),
-            ],
+          title: Text('Confirm Eviction'),
+          content: Text(
+            'Are you sure you want to evict ${widget.room.tenant?.name ?? "this tenant"}? This will remove the tenant and all associated receipts.',
           ),
           actions: [
             TextButton(
@@ -64,61 +211,22 @@ class _RoomDetailScreenState extends State<RoomDetailScreen> {
               child: Text('Cancel'),
             ),
             ElevatedButton(
-              onPressed: () async {
-                if (nameController.text.isNotEmpty &&
-                    phoneController.text.isNotEmpty) {
-                  setState(() {
-                    widget.room.tenant = Tenant(
-                      name: nameController.text,
-                      phone: phoneController.text,
-                      joinDate: DateTime.now().toString().split(' ')[0],
-                    );
-                  });
-                  
-                  if (widget.allRooms != null) {
-                    try {
-                      Map<String, dynamic> data = {
-                        'rooms': widget.allRooms!.map((room) => room.toJson()).toList(),
-                      };
-                      String jsonString = json.encode(data);
-                      final prefs = await SharedPreferences.getInstance();
-                      await prefs.setString('rooms_data', jsonString);
-                    } catch (e) {
-                      print('Error saving tenant: $e');
-                    }
-                  }
-                  
+              onPressed: () {
+                setState(() {
+                  widget.room.tenant = null;
+                  widget.room.receipts.clear();
                   widget.onUpdate();
-                  nameController.clear();
-                  phoneController.clear();
-                  Navigator.pop(context);
-                  
-                  if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('Tenant added successfully'),
-                        backgroundColor: Colors.green,
-                      ),
-                    );
-                  }
-                }
+                });
+                Navigator.pop(context); // Close confirmation dialog
+                Navigator.pop(context); // Close room detail screen
               },
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.blue),
-              child: Text('Add'),
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+              child: Text('Evict'),
             ),
           ],
         );
       },
     );
-  }
-
-  void evictTenant() {
-    setState(() {
-      widget.room.tenant = null;
-      widget.room.receipts.clear();
-      widget.onUpdate();
-    });
-    Navigator.pop(context);
   }
 
   void showEditReceiptDialog(Receipt receipt) {
@@ -307,7 +415,6 @@ class _RoomDetailScreenState extends State<RoomDetailScreen> {
       setState(() {
         receipt.isPaid = newStatus;
         receipt.paymentStatus = newStatusText;
-        print('RoomDetail: Toggled payment status to $newStatusText');
       });
 
       // Save immediately after toggle
@@ -321,8 +428,6 @@ class _RoomDetailScreenState extends State<RoomDetailScreen> {
 
           final prefs = await SharedPreferences.getInstance();
           await prefs.setString('rooms_data', jsonString);
-          print('RoomDetail: Data saved to SharedPreferences');
-          print('RoomDetail: Updated receipt status: ${receipt.paymentStatus}');
 
           // Show success message
           if (mounted) {
@@ -335,7 +440,6 @@ class _RoomDetailScreenState extends State<RoomDetailScreen> {
             );
           }
         } catch (e) {
-          print('RoomDetail: Error saving: $e');
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(

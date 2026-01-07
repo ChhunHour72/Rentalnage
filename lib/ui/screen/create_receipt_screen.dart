@@ -6,7 +6,9 @@ import '../../model/receipt.dart';
 import '../../data/initial_data.dart';
 
 class CreateReceiptScreen extends StatefulWidget {
-  const CreateReceiptScreen({super.key});
+  final Room? initialRoom;
+  
+  const CreateReceiptScreen({super.key, this.initialRoom});
 
   @override
   State<CreateReceiptScreen> createState() => _CreateReceiptScreenState();
@@ -60,7 +62,9 @@ class _CreateReceiptScreenState extends State<CreateReceiptScreen> {
       
       setState(() {
         rooms = tempRooms;
-        if (rooms.isNotEmpty) {
+        if (widget.initialRoom != null && tempRooms.any((r) => r.roomNumber == widget.initialRoom!.roomNumber)) {
+          selectedRoom = tempRooms.firstWhere((r) => r.roomNumber == widget.initialRoom!.roomNumber);
+        } else if (rooms.isNotEmpty) {
           selectedRoom = rooms[0];
         }
         isLoading = false;

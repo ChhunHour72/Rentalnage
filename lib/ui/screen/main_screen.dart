@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'tabs/dashboard_tab.dart';
-import 'tabs/today_payment_tab.dart';
+import 'tabs/payments_tab.dart';
 import 'create_receipt_screen.dart';
 
 class MainScreen extends StatefulWidget {
@@ -14,6 +14,7 @@ class _MainScreenState extends State<MainScreen> {
   // Variable to track which tab is currently selected
   int currentIndex = 0;
   final GlobalKey<DashboardTabState> dashboardKey = GlobalKey<DashboardTabState>();
+  final GlobalKey<PaymentsTabState> paymentsKey = GlobalKey<PaymentsTabState>();
 
   // List of pages/tabs to display
   late final List<Widget> pages;
@@ -23,7 +24,7 @@ class _MainScreenState extends State<MainScreen> {
     super.initState();
     pages = [
       DashboardTab(key: dashboardKey),
-      const TodayPaymentTab(),
+      PaymentsTab(key: paymentsKey),
     ];
   }
 
@@ -53,8 +54,9 @@ class _MainScreenState extends State<MainScreen> {
                 builder: (context) => CreateReceiptScreen(),
               ),
             );
-            // Refresh dashboard after creating receipt
+            // Refresh dashboard and payments after creating receipt
             dashboardKey.currentState?.loadData();
+            paymentsKey.currentState?.loadData();
           },
           backgroundColor: Colors.transparent,
           elevation: 0,
@@ -106,6 +108,8 @@ class _MainScreenState extends State<MainScreen> {
                     setState(() {
                       currentIndex = 1;
                     });
+                    // Reload payments tab when switching to it
+                    paymentsKey.currentState?.loadData();
                   },
                   child: Column(
                     mainAxisSize: MainAxisSize.min,

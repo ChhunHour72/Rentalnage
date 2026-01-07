@@ -27,22 +27,19 @@ class DashboardTabState extends State<DashboardTab> {
 
   Future<void> loadData() async {
     try {
-      print('DashboardTab: Starting to load data...');
-
+      // Using SharedPreferences to persist data across app restarts
+      // This allows landlords to maintain their tenant data even after closing the app
       final prefs = await SharedPreferences.getInstance();
       String? savedData = prefs.getString('rooms_data');
 
       String jsonString;
       if (savedData != null) {
         jsonString = savedData;
-        print('DashboardTab: Loaded from SharedPreferences');
       } else {
         jsonString = initialDataJson;
         await prefs.setString('rooms_data', jsonString);
-        print('DashboardTab: Initialized with default data');
       }
 
-      print('DashboardTab: Parsing JSON...');
       Map<String, dynamic> jsonData = json.decode(jsonString);
       List<dynamic> roomsJson = jsonData['rooms'];
       List<Room> tempRooms = [];
@@ -52,16 +49,13 @@ class DashboardTabState extends State<DashboardTab> {
         tempRooms.add(room);
       }
 
-      print('DashboardTab: Loaded ${tempRooms.length} rooms');
       if (mounted) {
         setState(() {
           rooms = tempRooms;
           isLoading = false;
         });
       }
-    } catch (e, stackTrace) {
-      print('Error loading data: $e');
-      print('Stack trace: $stackTrace');
+    } catch (e) {
       if (mounted) {
         setState(() {
           rooms = [];
@@ -73,8 +67,6 @@ class DashboardTabState extends State<DashboardTab> {
 
   Future<void> saveData() async {
     try {
-      print('DashboardTab: Saving data...');
-
       Map<String, dynamic> data = {
         'rooms': rooms.map((room) => room.toJson()).toList(),
       };
@@ -84,17 +76,11 @@ class DashboardTabState extends State<DashboardTab> {
 
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('rooms_data', jsonString);
-      print('DashboardTab: Data saved to SharedPreferences');
-      print(
-        'DashboardTab: Saved data: ${jsonString.substring(0, jsonString.length > 200 ? 200 : jsonString.length)}...',
-      );
-    } catch (e, stackTrace) {
-      print('Error saving data: $e');
-      print('Stack trace: $stackTrace');
+    } catch (e) {
+      // Handle error silently or show user-friendly message
     }
   }
 
-  // Calculate statistics
   int getTotalRooms() {
     return rooms.length;
   }
@@ -299,7 +285,9 @@ class DashboardTabState extends State<DashboardTab> {
                           ),
                           child: IconButton(
                             icon: Icon(Icons.add, color: Color(0xFFFF6B6B)),
-                            onPressed: () {},
+                            onPressed: () {
+                              showAssignTenantDialog();
+                            },
                           ),
                         ),
                       ],
@@ -357,6 +345,190 @@ class DashboardTabState extends State<DashboardTab> {
                 ],
               ),
             ),
+    );
+  }
+
+  void showAssignTenantDialog() {
+    // Filter for only empty rooms to show available options
+    // This prevents accidentally trying to assign multiple tenants to the same room
+    List<Room> emptyRooms = rooms.where((room) => room.tenant == null).toList();
+
+    if (emptyRooms.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('All rooms are currently occupied'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Select Available Room'),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Flexible(
+                  child: ListView.builder(
+                    shrinkWrap: true,
+                    itemCount: emptyRooms.length,
+                    itemBuilder: (context, index) {
+                      Room room = emptyRooms[index];
+                      return Card(
+                        margin: EdgeInsets.symmetric(vertical: 4),
+                        child: ListTile(
+                          leading: CircleAvatar(
+                            backgroundColor: Colors.grey,
+                            child: Text(
+                              room.roomNumber,
+                              style: TextStyle(color: Colors.white),
+                            ),
+                          ),
+                          title: Text('Room ${room.roomNumber}'),
+                          subtitle: Text('Available'),
+                          trailing: Icon(Icons.arrow_forward_ios, size: 16),
+                          onTap: () async {
+                            Navigator.pop(context);
+                            // Navigate to room detail to assign tenant
+                            await Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => RoomDetailScreen(
+                                  room: room,
+                                  onUpdate: () {
+                                    saveData();
+                                    loadData();
+                                  },
+                                  allRooms: rooms,
+                                ),
+                              ),
+                            );
+                            loadData();
+                          },
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                SizedBox(height: 12),
+                ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    showCreateRoomDialog();
+                  },
+                  icon: Icon(Icons.add_home),
+                  label: Text('Create New Room'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Color(0xFFFF6B6B),
+                    foregroundColor: Colors.white,
+                    minimumSize: Size(double.infinity, 45),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text('Cancel'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void showCreateRoomDialog() {
+    final roomNumberController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Create New Room'),
+          content: TextField(
+            controller: roomNumberController,
+            decoration: InputDecoration(
+              labelText: 'Room Number',
+              hintText: 'e.g., 11, 12, A1',
+              border: OutlineInputBorder(),
+              prefixIcon: Icon(Icons.door_front_door),
+            ),
+            autofocus: true,
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                if (roomNumberController.text.isNotEmpty) {
+                  // Check if room number already exists
+                  bool roomExists = rooms.any(
+                    (room) => room.roomNumber == roomNumberController.text.trim(),
+                  );
+
+                  if (roomExists) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Room ${roomNumberController.text} already exists'),
+                        backgroundColor: Colors.orange,
+                      ),
+                    );
+                    return;
+                  }
+
+                  // Create new room
+                  Room newRoom = Room(
+                    roomNumber: roomNumberController.text.trim(),
+                    tenant: null,
+                    receipts: [],
+                  );
+
+                  setState(() {
+                    rooms.add(newRoom);
+                  });
+
+                  saveData();
+                  Navigator.pop(context);
+
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Room ${roomNumberController.text} created successfully'),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+
+                  // Optionally navigate to the new room to assign tenant immediately
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => RoomDetailScreen(
+                        room: newRoom,
+                        onUpdate: () {
+                          saveData();
+                          loadData();
+                        },
+                        allRooms: rooms,
+                      ),
+                    ),
+                  ).then((_) => loadData());
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Color(0xFFFF6B6B),
+              ),
+              child: Text('Create'),
+            ),
+          ],
+        );
+      },
     );
   }
 }
