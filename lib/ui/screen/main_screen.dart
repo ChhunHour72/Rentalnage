@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'tabs/dashboard_tab.dart';
-import 'tabs/create_receipt_tab.dart';
-import 'tabs/view_rooms_tab.dart';
+import 'tabs/today_payment_tab.dart';
+import 'create_receipt_screen.dart';
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -11,31 +11,117 @@ class MainScreen extends StatefulWidget {
 }
 
 class _MainScreenState extends State<MainScreen> {
-  int _currentIndex = 0; 
+  // Variable to track which tab is currently selected
+  int currentIndex = 0;
 
-  final List<Widget> _pages = [
+  // List of pages/tabs to display
+  final List<Widget> pages = [
     const DashboardTab(),
-    const CreateReceiptTab(),
-    const ViewRoomsTab(),
+    const TodayPaymentTab(),
   ];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Rentalnage")),
-      body: _pages[_currentIndex],
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _currentIndex,
-        onTap: (index) {
-          setState(() {
-            _currentIndex = index;
-          });
-        },
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: "Home"),
-          BottomNavigationBarItem(icon: Icon(Icons.add), label: "Receipt"),
-          BottomNavigationBarItem(icon: Icon(Icons.list), label: "Rooms"),
-        ],
+      body: pages[currentIndex],
+      floatingActionButton: Container(
+        width: 65,
+        height: 65,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: Colors.black,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.3),
+              blurRadius: 8,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: FloatingActionButton(
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => CreateReceiptScreen(),
+              ),
+            );
+          },
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          child: const Icon(Icons.add, color: Colors.white, size: 30),
+        ),
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
+      bottomNavigationBar: BottomAppBar(
+        shape: const CircularNotchedRectangle(),
+        notchMargin: 8,
+        color: Colors.black,
+        child: SizedBox(
+          height: 60,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              Expanded(
+                child: InkWell(
+                  onTap: () {
+                    setState(() {
+                      currentIndex = 0;
+                    });
+                  },
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.home,
+                        color: currentIndex == 0 ? Colors.red : Colors.grey.shade600,
+                        size: 28,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Home',
+                        style: TextStyle(
+                          color: currentIndex == 0 ? Colors.red : Colors.grey.shade600,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(width: 80),
+              Expanded(
+                child: InkWell(
+                  onTap: () {
+                    setState(() {
+                      currentIndex = 1;
+                    });
+                  },
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.receipt,
+                        color: currentIndex == 1 ? Colors.red : Colors.grey.shade600,
+                        size: 28,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Receipt',
+                        style: TextStyle(
+                          color: currentIndex == 1 ? Colors.red : Colors.grey.shade600,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

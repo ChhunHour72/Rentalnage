@@ -12,12 +12,14 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return DevicePreview(
-      // Set to true to enable device preview
+      enabled: false, // Set to true to enable device preview
       builder: (context) => MaterialApp(
         useInheritedMediaQuery: true,
         debugShowCheckedModeBanner: false,
-        title: 'Rentalange',
-        theme: ThemeData(primarySwatch: Colors.blue),
+        title: 'Rentalnage',
+        theme: ThemeData(
+          primarySwatch: Colors.blue,
+        ),
         home: const WelcomeScreen(),
       ),
     );
