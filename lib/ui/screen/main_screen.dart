@@ -13,12 +13,19 @@ class MainScreen extends StatefulWidget {
 class _MainScreenState extends State<MainScreen> {
   // Variable to track which tab is currently selected
   int currentIndex = 0;
+  final GlobalKey<DashboardTabState> dashboardKey = GlobalKey<DashboardTabState>();
 
   // List of pages/tabs to display
-  final List<Widget> pages = [
-    const DashboardTab(),
-    const TodayPaymentTab(),
-  ];
+  late final List<Widget> pages;
+
+  @override
+  void initState() {
+    super.initState();
+    pages = [
+      DashboardTab(key: dashboardKey),
+      const TodayPaymentTab(),
+    ];
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -39,13 +46,15 @@ class _MainScreenState extends State<MainScreen> {
           ],
         ),
         child: FloatingActionButton(
-          onPressed: () {
-            Navigator.push(
+          onPressed: () async {
+            await Navigator.push(
               context,
               MaterialPageRoute(
                 builder: (context) => CreateReceiptScreen(),
               ),
             );
+            // Refresh dashboard after creating receipt
+            dashboardKey.currentState?.loadData();
           },
           backgroundColor: Colors.transparent,
           elevation: 0,

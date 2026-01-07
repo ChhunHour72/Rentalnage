@@ -33,19 +33,27 @@ class _TodayPaymentTabState extends State<TodayPaymentTab> {
         tempRooms.add(Room.fromJson(roomsJson[i]));
       }
       
-      setState(() {
-        allRooms = tempRooms;
-        displayedRooms = tempRooms;
-        isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          allRooms = tempRooms;
+          displayedRooms = tempRooms;
+          isLoading = false;
+        });
+      }
     } catch (e) {
-      setState(() {
-        isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          allRooms = [];
+          displayedRooms = [];
+          isLoading = false;
+        });
+      }
     }
   }
 
   void filterRooms(String filter) {
+    if (!mounted) return;
+    
     setState(() {
       currentFilter = filter;
       
@@ -110,7 +118,8 @@ class _TodayPaymentTabState extends State<TodayPaymentTab> {
                           itemCount: displayedRooms.length,
                           itemBuilder: (context, index) {
                             Room room = displayedRooms[index];
-                            Color statusColor = room.statusColor == "Unpaid" 
+                            String roomStatus = room.statusColor;
+                            Color statusColor = roomStatus == "Unpaid" 
                                 ? Colors.red 
                                 : Colors.purple;
                             
@@ -124,7 +133,7 @@ class _TodayPaymentTabState extends State<TodayPaymentTab> {
                                 title: Text(room.tenant?.name ?? 'No Tenant'),
                                 subtitle: Text('Room ${room.roomNumber}'),
                                 trailing: Chip(
-                                  label: Text(room.statusColor),
+                                  label: Text(roomStatus),
                                   backgroundColor: statusColor.withOpacity(0.2),
                                 ),
                               ),

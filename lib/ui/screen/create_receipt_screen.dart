@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:convert';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../model/room.dart';
 import '../../model/receipt.dart';
 import '../../data/initial_data.dart';
@@ -41,7 +42,11 @@ class _CreateReceiptScreenState extends State<CreateReceiptScreen> {
 
   Future<void> loadData() async {
     try {
-      String jsonString = initialDataJson;
+      // Try to load from SharedPreferences first
+      final prefs = await SharedPreferences.getInstance();
+      String? savedData = prefs.getString('rooms_data');
+      
+      String jsonString = savedData ?? initialDataJson;
       Map<String, dynamic> jsonData = json.decode(jsonString);
       List<dynamic> roomsJson = jsonData['rooms'];
       
@@ -77,7 +82,40 @@ class _CreateReceiptScreenState extends State<CreateReceiptScreen> {
     });
   }
 
-  void createReceipt() {
+  Future<void> selectStartDate(BuildContext context) async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now(),
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2030),
+    );
+    if (picked != null) {
+      setState(() {
+        durDate = "${picked.day.toString().padLeft(2, '0')} ${_getMonthName(picked.month)}, ${picked.year}";
+      });
+    }
+  }
+
+  Future<void> selectEndDate(BuildContext context) async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now().add(Duration(days: 30)),
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2030),
+    );
+    if (picked != null) {
+      setState(() {
+        endDate = "${picked.day.toString().padLeft(2, '0')} ${_getMonthName(picked.month)}, ${picked.year}";
+      });
+    }
+  }
+
+  String _getMonthName(int month) {
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return months[month - 1];
+  }
+
+  void createReceipt() async {
     if (selectedRoom == null) return;
 
     Receipt newReceipt = Receipt(
@@ -93,6 +131,34 @@ class _CreateReceiptScreenState extends State<CreateReceiptScreen> {
     setState(() {
       selectedRoom!.receipts.add(newReceipt);
     });
+
+    // Save to SharedPreferences
+    try {
+      Map<String, dynamic> data = {
+        'rooms': rooms.map((room) => room.toJson()).toList(),
+      };
+      String jsonString = json.encode(data);
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('rooms_data', jsonString);
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Receipt created successfully'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error saving receipt'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
 
     Navigator.pop(context);
   }
@@ -162,6 +228,30 @@ class _CreateReceiptScreenState extends State<CreateReceiptScreen> {
               controller: totalController,
               decoration: InputDecoration(labelText: 'Total'),
               enabled: false,
+            ),
+            SizedBox(height: 20),
+            InkWell(
+              onTap: () => selectStartDate(context),
+              child: InputDecorator(
+                decoration: InputDecoration(
+                  labelText: 'Start Date',
+                  border: OutlineInputBorder(),
+                  suffixIcon: Icon(Icons.calendar_today),
+                ),
+                child: Text(durDate),
+              ),
+            ),
+            SizedBox(height: 10),
+            InkWell(
+              onTap: () => selectEndDate(context),
+              child: InputDecorator(
+                decoration: InputDecoration(
+                  labelText: 'End Date',
+                  border: OutlineInputBorder(),
+                  suffixIcon: Icon(Icons.event),
+                ),
+                child: Text(endDate),
+              ),
             ),
             SizedBox(height: 30),
             ElevatedButton(

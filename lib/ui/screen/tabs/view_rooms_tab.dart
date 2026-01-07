@@ -22,12 +22,29 @@ class _ViewRoomsTabState extends State<ViewRoomsTab> {
   bool isLoading = true;
   // Variable to track current filter (All, Paid, Unpaid)
   String currentFilter = "All";
+  // Search controller
+  TextEditingController searchController = TextEditingController();
+  // Search text
+  String searchText = "";
 
   @override
   void initState() {
     super.initState();
     // Load data when screen opens
     loadData();
+    // Listen to search changes
+    searchController.addListener(() {
+      setState(() {
+        searchText = searchController.text;
+        applyFilters();
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    searchController.dispose();
+    super.dispose();
   }
 
   // Function to read JSON file and parse it
@@ -68,12 +85,19 @@ class _ViewRoomsTabState extends State<ViewRoomsTab> {
         });
       }
     } catch (e) {
-      // If there's an error, print it and stop loading
+      // If there's an error, print it and show to user
       print('Error loading data: $e');
       if (mounted) {
         setState(() {
           isLoading = false;
         });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error loading rooms: $e'),
+            backgroundColor: Colors.red,
+            duration: Duration(seconds: 3),
+          ),
+        );
       }
     }
   }
@@ -101,24 +125,37 @@ class _ViewRoomsTabState extends State<ViewRoomsTab> {
   void filterRooms(String filter) {
     setState(() {
       currentFilter = filter;
-
-      if (filter == "All") {
-        // Show all rooms
-        displayedRooms = allRooms;
-      } else {
-        // Create empty list for filtered results
-        List<Room> filteredList = [];
-
-        // Loop through all rooms and add matching ones
-        for (int i = 0; i < allRooms.length; i++) {
-          if (allRooms[i].status == filter) {
-            filteredList.add(allRooms[i]);
-          }
-        }
-
-        displayedRooms = filteredList;
-      }
+      applyFilters();
     });
+  }
+
+  // Apply both status filter and search filter
+  void applyFilters() {
+    List<Room> filteredList = allRooms;
+
+    // Apply status filter
+    if (currentFilter != "All") {
+      List<Room> statusFiltered = [];
+      for (int i = 0; i < filteredList.length; i++) {
+        if (filteredList[i].status == currentFilter) {
+          statusFiltered.add(filteredList[i]);
+        }
+      }
+      filteredList = statusFiltered;
+    }
+
+    // Apply search filter
+    if (searchText.isNotEmpty) {
+      List<Room> searchFiltered = [];
+      for (int i = 0; i < filteredList.length; i++) {
+        if (filteredList[i].roomNumber.toLowerCase().contains(searchText.toLowerCase())) {
+          searchFiltered.add(filteredList[i]);
+        }
+      }
+      filteredList = searchFiltered;
+    }
+
+    displayedRooms = filteredList;
   }
 
   @override
@@ -131,6 +168,30 @@ class _ViewRoomsTabState extends State<ViewRoomsTab> {
       ),
       body: Column(
         children: [
+          // Search bar
+          Container(
+            padding: EdgeInsets.all(16),
+            child: TextField(
+              controller: searchController,
+              decoration: InputDecoration(
+                hintText: 'Search room number...',
+                prefixIcon: Icon(Icons.search),
+                suffixIcon: searchText.isNotEmpty
+                    ? IconButton(
+                        icon: Icon(Icons.clear),
+                        onPressed: () {
+                          searchController.clear();
+                        },
+                      )
+                    : null,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(30),
+                ),
+                filled: true,
+                fillColor: Colors.grey.shade100,
+              ),
+            ),
+          ),
           // Filter buttons
           Container(
             padding: EdgeInsets.all(16),
