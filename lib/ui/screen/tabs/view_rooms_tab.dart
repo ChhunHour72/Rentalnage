@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:convert';
-import '../../../model/rental_model.dart';
+import '../../../model/room.dart';
 import '../../../data/initial_data.dart';
 import '../../widget/tenant_card.dart';
 import '../room_detail_screen.dart';

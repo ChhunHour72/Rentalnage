@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:convert';
-import '../../../model/rental_model.dart';
+import '../../../model/room.dart';
 import '../../../data/initial_data.dart';
 import '../../widget/statistics_card.dart';
 import '../../widget/expense_card.dart';
@@ -15,46 +15,33 @@ class DashboardTab extends StatefulWidget {
 }
 
 class _DashboardTabState extends State<DashboardTab> {
-  // List to store all rooms
   List<Room> rooms = [];
-  // Variable to track if data is still loading
   bool isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    // Load data when screen opens
     loadData();
   }
 
-  // Function to read JSON file and parse it
   Future<void> loadData() async {
     try {
-      // Get the JSON data from the data file
       String jsonString = initialDataJson;
       
-      // Convert JSON string to Map
       Map<String, dynamic> jsonData = json.decode(jsonString);
-      
-      // Get the rooms array from JSON
       List<dynamic> roomsJson = jsonData['rooms'];
-      
-      // Create a temporary list to store Room objects
       List<Room> tempRooms = [];
       
-      // Loop through each room in JSON and convert to Room object
       for (int i = 0; i < roomsJson.length; i++) {
         Room room = Room.fromJson(roomsJson[i]);
         tempRooms.add(room);
       }
       
-      // Update the state with loaded rooms
       setState(() {
         rooms = tempRooms;
         isLoading = false;
       });
     } catch (e) {
-      // If there's an error, print it and stop loading
       print('Error loading data: $e');
       setState(() {
         isLoading = false;

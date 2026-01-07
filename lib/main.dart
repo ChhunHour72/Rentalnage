@@ -12,7 +12,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return DevicePreview(
-      enabled: false, // Set to true to enable device preview
+      enabled: true, // Set to true to enable device preview
       builder: (context) => MaterialApp(
         useInheritedMediaQuery: true,
         debugShowCheckedModeBanner: false,

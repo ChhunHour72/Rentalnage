@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../model/rental_model.dart';
+import '../../model/room.dart';
 
 // This is a reusable widget that displays room information
 class TenantCard extends StatelessWidget {
